@@ -15,14 +15,11 @@ void putPixel(int x, int y, ubyte p) { if (x<w && y<h) preview[y*w+x] = p; }
 
 int checkChar(ubyte c, int x, int y)
 {
-	int diff, total;
+	int diff;
 	foreach (cy; 0..8)
 		foreach (cx; 0..fontWidth[c]+1)
-		{
-			total += 255;
 			diff += abs(cast(int)getPixel(x+cx, y+cy) - cast(int)getFontPixel(c, cx, cy));
-		}
-	return (total-diff)*0x10000/total;
+	return diff;
 }
 
 void drawChar(ubyte c, int x, int y)
@@ -53,6 +50,7 @@ void main()
 		fontWidth[c] = width;
 	}
 
+	assert(fontWidth['.'] == 1);
 	fontWidth[32] = 3;
 
 	string s = cast(string)read("image.pbm");
@@ -73,16 +71,21 @@ void main()
 		while (x < w)
 		{
 			ubyte bestc;
-			int bestScore;
+			int bestScore = int.max;
 			foreach (ubyte c; 32..127)
 			{
 				if (c == '`') continue;
 				if (c == 32 && leadingWhitespace) continue;
-				int score = checkChar(c, x, y);
-				if (bestScore < score)
+				int score1 = checkChar(c, x, y);
+				foreach (ubyte c2; 32..127)
 				{
-					bestScore = score;
-					bestc = c;
+					if (c2 == '`') continue;
+					int score = (score1 + checkChar(c2, x+fontWidth[c]+1, y)) / (fontWidth[c]+1+fontWidth[c2]+1);
+					if (bestScore > score)
+					{
+						bestScore = score;
+						bestc = c;
+					}
 				}
 			}
 			drawChar(bestc, x, y);
