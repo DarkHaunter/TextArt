@@ -3,6 +3,8 @@ import std.format;
 import std.stdio;
 import std.math;
 import std.string;
+import std.algorithm;
+import std.range;
 
 ubyte[128][128] fontBitmap;
 int[256] fontWidth;
@@ -53,49 +55,51 @@ void main()
 	assert(fontWidth['.'] == 1);
 	fontWidth[32] = 3;
 
-	string s = cast(string)read("image.pbm");
+	string imageData = cast(string)read("image.pbm");
 	string type; int maxLevel;
-	formattedRead(s, "%s\n%d\n%d\n%d\n", &type, &w, &h, &maxLevel);
+	formattedRead(imageData, "%s\n%d\n%d\n%d\n", &type, &w, &h, &maxLevel);
 	assert(type == "P5");
 	assert(maxLevel == 255);
 
-	image = cast(ubyte[])s;
+	image = cast(ubyte[])imageData;
 	preview.length = image.length;
 
 	auto result = File("text.txt", "w");
 
 	for (int y=0; y<h; y+=9)
 	{
-		int x = 0;
-		bool leadingWhitespace = true;
-		while (x < w)
+		struct Progress
 		{
-			ubyte bestc;
-			int bestScore = int.max;
-			foreach (ubyte c; 32..127) if (c != '`')
-			{
-				if (c == 32 && leadingWhitespace) continue;
-				int score1 = checkChar(c, x, y);
-				foreach (ubyte c2; 32..127) if (c2 != '`')
-				{
-					int score2 = checkChar(c2, x, y);
-					foreach (ubyte c3; 32..127) if (c3 != '`')
-					{
-						int score = (score1 + score2 + checkChar(c2, x+fontWidth[c]+1, y)) / (fontWidth[c]+1+fontWidth[c2]+1+fontWidth[c3]+1);
-						if (bestScore > score)
-						{
-							bestScore = score;
-							bestc = c;
-						}
-					}
-				}
-			}
-			drawChar(bestc, x, y);
-			result.write(cast(char)bestc); result.flush();
-			x += fontWidth[bestc] + 1;
-			if (bestc != 32) leadingWhitespace = false;
+			int score = int.max;
+			ubyte c;
 		}
-		result.writeln();
+		auto progress = new Progress[w+9];
+		progress[0].score = 0;
+
+		foreach (x, p; progress[0..w]) if (p.score < int.max)
+		{
+			foreach (ubyte c; 32..127) if (c != '`' && (x>0 || c != ' '))
+			{
+				int x2 = x + fontWidth[c] + 1;
+				int score2 = p.score + checkChar(c, x, y);
+				if (progress[x2].score > score2)
+					progress[x2].score = score2,
+					progress[x2].c = c;
+			}
+		}
+
+		uint minProgressScore(uint a, uint b) { return progress[a].score < progress[b].score ? a : b; }
+		int x = reduce!minProgressScore(iota(w, progress.length));
+		string s;
+		while (x)
+		{
+			auto c = progress[x].c;
+			s = cast(char)c ~ s;
+			x -= fontWidth[c] + 1;
+			drawChar(c, x, y);
+		}
+
+		result.writeln(s);
 	}
 
 	std.file.write("preview.pbm", cast(ubyte[])format("P5\n%d\n%d\n255\n", w, h) ~ preview);
