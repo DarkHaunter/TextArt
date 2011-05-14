@@ -72,24 +72,26 @@ void main()
 		{
 			ubyte bestc;
 			int bestScore = int.max;
-			foreach (ubyte c; 32..127)
+			foreach (ubyte c; 32..127) if (c != '`')
 			{
-				if (c == '`') continue;
 				if (c == 32 && leadingWhitespace) continue;
 				int score1 = checkChar(c, x, y);
-				foreach (ubyte c2; 32..127)
+				foreach (ubyte c2; 32..127) if (c2 != '`')
 				{
-					if (c2 == '`') continue;
-					int score = (score1 + checkChar(c2, x+fontWidth[c]+1, y)) / (fontWidth[c]+1+fontWidth[c2]+1);
-					if (bestScore > score)
+					int score2 = checkChar(c2, x, y);
+					foreach (ubyte c3; 32..127) if (c3 != '`')
 					{
-						bestScore = score;
-						bestc = c;
+						int score = (score1 + score2 + checkChar(c2, x+fontWidth[c]+1, y)) / (fontWidth[c]+1+fontWidth[c2]+1+fontWidth[c3]+1);
+						if (bestScore > score)
+						{
+							bestScore = score;
+							bestc = c;
+						}
 					}
 				}
 			}
 			drawChar(bestc, x, y);
-			result.write(cast(char)bestc);
+			result.write(cast(char)bestc); result.flush();
 			x += fontWidth[bestc] + 1;
 			if (bestc != 32) leadingWhitespace = false;
 		}
