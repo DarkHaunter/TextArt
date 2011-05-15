@@ -11,14 +11,17 @@ Loop
         return
     StringSplit, characters, line
     ;Send %line%
+    Sleep 50
     Send {Tab}
+    Sleep 50
     ;SendRaw %line%
     Loop, %characters0%
     {
       this_character := characters%a_index%
       SendRaw %this_character%
-      Sleep 1
+      Sleep 2
     }
+    Sleep 50
     Send {Enter}
     Sleep 50
 }
