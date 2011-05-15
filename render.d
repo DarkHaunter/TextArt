@@ -5,6 +5,8 @@ import std.math;
 import std.string;
 import std.algorithm;
 import std.range;
+import std.path;
+import std.exception;
 
 ubyte[128][128] fontBitmap;
 int[256] fontWidth;
@@ -31,8 +33,10 @@ void drawChar(ubyte c, int x, int y)
 			putPixel(x+cx, y+cy, getFontPixel(c, cx, cy));
 }
 
-void main()
+void main(string[] args)
 {
+	enforce(args.length==2, "Specify input PBM image");
+
 	(cast(ubyte[])fontBitmap)[] = cast(ubyte[])read("font.pbm")[15..$];
 	
 	foreach (c; 0..256)
@@ -55,16 +59,16 @@ void main()
 	assert(fontWidth['.'] == 1);
 	fontWidth[32] = 3;
 
-	string imageData = cast(string)read("image.pbm");
+	string imageData = cast(string)read(args[1]);
 	string type; int maxLevel;
 	formattedRead(imageData, "%s\n%d\n%d\n%d\n", &type, &w, &h, &maxLevel);
-	assert(type == "P5");
-	assert(maxLevel == 255);
+	enforce(type == "P5", "Invalid file format");
+	enforce(maxLevel == 255, "Invalid depth");
 
 	image = cast(ubyte[])imageData;
 	preview.length = image.length;
 
-	auto result = File("text.txt", "w");
+	auto result = File(getName(args[1]) ~ ".txt", "w");
 
 	for (int y=0; y<h; y+=9)
 	{
@@ -99,8 +103,10 @@ void main()
 			drawChar(c, x, y);
 		}
 
+		while (s[$-1]==' ')
+			s = s[0..$-1];
 		result.writeln(s);
 	}
 
-	std.file.write("preview.pbm", cast(ubyte[])format("P5\n%d\n%d\n255\n", w, h) ~ preview);
+	std.file.write(getName(args[1]) ~ "-preview.pbm", cast(ubyte[])format("P5\n%d\n%d\n255\n", w, h) ~ preview);
 }
